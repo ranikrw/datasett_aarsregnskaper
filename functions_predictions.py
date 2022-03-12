@@ -1,5 +1,8 @@
-import pandas as pd
 import numpy as np
+# Copyright © 2005-2019, NumPy Developers.
+
+import pandas as pd
+# Copyright (c) 2008-2012, AQR Capital Management, LLC, Lambda Foundry, Inc. and PyData Development Team
 
 def make_variables_for_predictions(data):
 

@@ -76,7 +76,6 @@ data = data[data['naeringskoder_level_1']!='E'] # Water supply, sewerage, waste
 data = data[data['naeringskoder_level_1']!='MISSING'] # Missing
 data = data[data['naeringskoder_level_1']!='0'] # companies for investment and holding purposes only
 data = data[data['naeringskoder_level_1']!='O'] # Public sector
-data = data[data['naeringskoder_level_1']!='T'] # Households as employers activities
 data = data.reset_index(drop=True) # Reset index 
 
 ##################################################################
@@ -84,6 +83,15 @@ data = data.reset_index(drop=True) # Reset index
 ##################################################################
 # Making variables for bankruptcy prediction
 data,variable_list = make_variables_for_predictions(data)
+# All variables are added to data as individual columns at the end
+# variable_list is a list of all variables created
+
+# As discussed in Paraschiv, Schmid & Wahlstrøm (2022), the variable
+# "short-term liquidity / current assets" is not often selected, and
+# also highly correlated with "inventory / current assets". Suggest
+# therefore to remove it to avoid multicollinearity in the
+# logistic regressions:
+variable_list.remove('short-term liquidity / current assets')
 
 ##################################################################
 ##  Preprocessing data for predictions                          ##
@@ -206,7 +214,9 @@ if temp1!=temp2:
         print('ERROR: data_with_predictions not same as original data')
 
 # Saving results to excel:
-results_table.to_excel("results_table.xlsx")
+filename = 'results_table.xlsx'
+results_table.to_excel(filename)
+print('Results saved to '+filename)
 
 # data_with_predictions is the original data set, but only for the years
 # of which you have created test sets, and with predictions for each
