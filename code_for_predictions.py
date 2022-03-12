@@ -13,11 +13,8 @@ import numpy as np
 import pandas as pd
 # Copyright (c) 2008-2012, AQR Capital Management, LLC, Lambda Foundry, Inc. and PyData Development Team
 
-import time
 import os
 
-import sys
-sys.path.insert(1, 'functions')
 from functions_predictions import *
 
 ##################################################################
@@ -26,7 +23,7 @@ from functions_predictions import *
 print('-----------------------------------------')
 print('Loading data:')
 print('-----------------------------------------')
-folder_name = '../data5/'
+folder_name = '../../data5/'
 files = os.listdir(folder_name)
 for current_file in files:
     file_year = int(current_file[0:4])
