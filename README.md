@@ -1,5 +1,6 @@
 # datasett_aarsregnskaper
-This code is for master's theses I supervise
+This code is for master's theses I supervise.\
+Later, I will make this repository public.
 
 ## code_for_predictions.py 
 Reproduces to some degree much of the results of Table 2 in the following study:\
