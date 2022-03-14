@@ -10,11 +10,13 @@ import time
 
 import os
 
+from sklearn.preprocessing import StandardScaler
+
 ##################################################################
 ##  Functions                                                   ##
 ##################################################################
 
-def KNNImputer_rrw(var_mis_con,var_mis_cat,var_use,n_neighbors_con,data):
+def KNNImputer_rrw(var_mis_con,var_mis_cat,var_use,n_neighbors_con,data,do_standardize_vector_space):
     # All variables that are imputed are treated as continious variables
     
     # var_mis_con: CONTINIOUS variables with missing values to be imputed
@@ -42,8 +44,17 @@ def KNNImputer_rrw(var_mis_con,var_mis_cat,var_use,n_neighbors_con,data):
         for i in var_mis_con:
             t = time.time()
             print('-------------------------')
+
+            # Creating vector space used for the kNN-algorithm
+            data_var_use = data[var_use]
+
+            # Standardizing the vector space to a mean of 0 and 
+            # standard deviation of 1 for each variable, respectively
+            if do_standardize_vector_space:
+                data_var_use = pd.DataFrame(StandardScaler().fit_transform(data_var_use),columns=data_var_use.columns)
+
             # Making data such that first column is the one to be imputed
-            data_for_imputation = data[[i]+var_use]
+            data_for_imputation = pd.concat([data[i],data_var_use],axis=1)
             num_missing_before = np.sum(pd.isnull(data[i]))
 
             # Imputing
@@ -63,8 +74,16 @@ def KNNImputer_rrw(var_mis_con,var_mis_cat,var_use,n_neighbors_con,data):
         for i in var_mis_cat:
             t = time.time()
             print('-------------------------')
+            # Creating vector space used for the kNN-algorithm
+            data_var_use = data[var_use]
+
+            # Standardizing the vector space to a mean of 0 and 
+            # standard deviation of 1 for each variable, respectively
+            if do_standardize_vector_space:
+                data_var_use = pd.DataFrame(StandardScaler().fit_transform(data_var_use),columns=data_var_use.columns)
+
             # Making data such that first column is the one to be imputed
-            data_for_imputation = data[[i]+var_use]
+            data_for_imputation = pd.concat([data[i],data_var_use],axis=1)
             num_missing_before = np.sum(pd.isnull(data[i]))
             num_cat_values_before = len(data[i][pd.isnull(data[i])==False].unique())
             
@@ -115,6 +134,10 @@ data.loc[2,'c'] = None
 # number of neighboring samples to use for imputation for continious variables
 n_neighbors_con = 3
 
+# Set to True for standardizing the vector space for the kNN algorithm 
+# to a mean of 0 and standard deviation of 1 for each variable, respectively
+do_standardize_vector_space = True
+
 # CONTINIOUS variables with missing values to be imputed
 var_mis_con = [
     'a',
@@ -133,7 +156,7 @@ var_use = [
     'd',
     'e',
 ]
-data = KNNImputer_rrw(var_mis_con,var_mis_cat,var_use,n_neighbors_con,data)
+data = KNNImputer_rrw(var_mis_con,var_mis_cat,var_use,n_neighbors_con,data,do_standardize_vector_space)
 # This fails because 'e' has missing values
 
 # Trying again only with variables fror the KNN without missing values: 
@@ -142,7 +165,7 @@ var_use = [
     'b',
     'd',
 ]
-data = KNNImputer_rrw(var_mis_con,var_mis_cat,var_use,n_neighbors_con,data)
+data = KNNImputer_rrw(var_mis_con,var_mis_cat,var_use,n_neighbors_con,data,do_standardize_vector_space)
 
 # Note that for column 'e', there are still missing values
 
@@ -249,8 +272,12 @@ data['new_var_con'] = variable_with_missing_values
 ##################################################################
 ##  Imputing the continious variable                            ##
 ##################################################################
-# number of neighboring samples to use for imputation
+# number of neighboring samples to use for imputation for continious variables
 n_neighbors_con = 3
+
+# Set to True for standardizing the vector space for the kNN algorithm 
+# to a mean of 0 and standard deviation of 1 for each variable, respectively
+do_standardize_vector_space = True
 
 # CONTINIOUS variables with missing values to be imputed
 var_mis_con = [
@@ -278,7 +305,7 @@ var_use = [
     'can_opt_out',
     'age_in_days',
 ]
-data = KNNImputer_rrw(var_mis_con,var_mis_cat,var_use,n_neighbors_con,data)
+data = KNNImputer_rrw(var_mis_con,var_mis_cat,var_use,n_neighbors_con,data,do_standardize_vector_space)
 
 print('-------------------------')
 print('Number of missing values for variable \'{}\' AFTER imputing: {}'\

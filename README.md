@@ -9,3 +9,6 @@ Available at SSRN: https://dx.doi.org/10.2139/ssrn.3911490 \
 
 ## functions_predictions.py
 Functions used in code_for_predictions.py 
+
+## missing_values.py
+This code exemplifies handling of imputation for completing missing values using k-Nearest Neighbors. Both continious and categorical variables are handled with this code. 
