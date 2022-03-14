@@ -6,16 +6,23 @@ import pandas as pd
 
 from sklearn.impute import KNNImputer
 
+import time
+
 import os
 
 ##################################################################
 ##  Functions                                                   ##
 ##################################################################
 
-def KNNImputer_rrw(var_mis,var_use,n_neighbors,data):
-    # var_mis: variables with missing values to be imputed
+def KNNImputer_rrw(var_mis_con,var_mis_cat,var_use,n_neighbors_con,data):
+    # All variables that are imputed are treated as continious variables
+    
+    # var_mis_con: CONTINIOUS variables with missing values to be imputed
+    # var_mis_cat: CATEGORICAL variables with missing values to be imputed
     # var_use: variables used in the vector space for the kNN algorithm for imputation 
-    # n_neighbors: number of neighboring samples to use for imputation
+    
+    # n_neighbors_con: number of neighboring samples to use for imputation for continious variables
+    # For categorical variables, n_neighbors is one for selecting the value of the one closest
 
     # Checking that variables used for imputation do not have missing values
     temp = np.sum(pd.isnull(data[var_use]))
@@ -25,21 +32,63 @@ def KNNImputer_rrw(var_mis,var_use,n_neighbors,data):
             print('-------------------------')
             print('ERROR: Variable \'{}\' is used for k-NN imputation. However, it has missing values. Missing values are set to zero in the k-NN imputation, so consider not including this variable.'.format(i))
         print('-------------------------')
-        print('Imputing failed')
+        print('Imputing failed. No values imputed.')
+        print('-------------------------')
 
-    if len(temp)==0:
+    elif len(temp)==0:
         # Imputing variable, one at a time
-        for i in var_mis:
+
+        # First, continious variables
+        for i in var_mis_con:
+            t = time.time()
+            print('-------------------------')
             # Making data such that first column is the one to be imputed
             data_for_imputation = data[[i]+var_use]
+            num_missing_before = np.sum(pd.isnull(data[i]))
 
             # Imputing
-            imputer = KNNImputer(n_neighbors=n_neighbors,weights='distance')
+            imputer = KNNImputer(n_neighbors=n_neighbors_con,weights='distance')
             temp = pd.DataFrame(imputer.fit_transform(data_for_imputation))
 
             # First column is the one imputed, so replacing this one in data
             data[i] = temp[0]
-    
+
+            num_missing_after = np.sum(pd.isnull(data[i]))
+            print('Imputed {} instances of missing values for continious variable \'{}\''.format(num_missing_before-num_missing_after,i))
+            print('Elapset time: {} minutes'.format(np.round((time.time()-t)/60,2)))
+            if num_missing_after!=0:
+                print('ERROR: Imputation failed: still {} instances of missing values for variable {}'.format(num_missing_after,i))
+
+        # Second, categorical variables including dummies
+        for i in var_mis_cat:
+            t = time.time()
+            print('-------------------------')
+            # Making data such that first column is the one to be imputed
+            data_for_imputation = data[[i]+var_use]
+            num_missing_before = np.sum(pd.isnull(data[i]))
+            num_cat_values_before = len(data[i][pd.isnull(data[i])==False].unique())
+            
+            # Imputing
+            imputer = KNNImputer(n_neighbors=1)
+            temp = pd.DataFrame(imputer.fit_transform(data_for_imputation))
+
+            # First column is the one imputed, so replacing this one in data
+            data[i] = temp[0]
+
+            num_missing_after = np.sum(pd.isnull(data[i]))
+            num_cat_values_after = len(data[i][pd.isnull(data[i])==False].unique())
+
+            print('Imputed {} instances of missing values for continious variable \'{}\''.format(num_missing_before-num_missing_after,i))
+            print('Elapset time: {} minutes'.format(np.round((time.time()-t)/60,2)))
+            if num_cat_values_before!=num_cat_values_after:
+                print('ERROR: number of categorical values before and after impotation are {} and {}, respectively.'.format(num_cat_values_before,num_cat_values_after))
+            else:
+                print('Number of categorical values for variable \'{}\': {}'.format(i,num_cat_values_after))
+            if num_missing_after!=0:
+                print('ERROR: Imputation failed: still {} instances of missing values for variable {}'.format(num_missing_after,i))
+
+        print('-------------------------')
+
     return data
 
 ##################################################################
@@ -47,23 +96,35 @@ def KNNImputer_rrw(var_mis,var_use,n_neighbors,data):
 ##################################################################
 # Making simple data frame
 data = pd.DataFrame([
-    [1, 2, np.nan, 82.8, np.nan],
-    [3, 4.8, 3, 7, 6],
-    [np.nan, 6, 5, 1, 2],
-    [8, 8, 7, 0, 22]],
-    columns=['a','b','c','d','e'])
+    [1, 2, np.nan, 82.8, np.nan, 1, 2],
+    [3, 4.8, 3, 7, 6, 0, 1],
+    [np.nan, 6, 5.7, 1, 2, 0, 1],
+    [8, 8, 7, 0.1, 22, 0, 3],
+    [55, 3, 1, 3.4, 7, np.nan, 3],
+    [1, 4.9, 8, 11, 2, 1, np.nan],
+    [3, 44, 0, 1, 8, 1, 3]],
+    columns=['a','b','c','d','e','f','g'])
+# 'f' is a dummy variable, that is, it is categorical
+# 'g' is categorical with three potential outcomes (1, 2, and 3)
+# the other variables are continious
 
-# Setting one value to None
+# Setting one value to None, just to illustrate 
+# that None also is imputed
 data.loc[2,'c'] = None
 
-# number of neighboring samples to use for imputation
-n_neighbors = 2
+# number of neighboring samples to use for imputation for continious variables
+n_neighbors_con = 3
 
-
-# variables with missing values to be imputed
-var_mis = [
+# CONTINIOUS variables with missing values to be imputed
+var_mis_con = [
     'a',
     'c',
+]
+
+# CATEGORICAL variables with missing values to be imputed
+var_mis_cat = [
+    'f',
+    'g',
 ]
 
 # variables used in the vector space for the kNN algorithm for imputation 
@@ -72,7 +133,7 @@ var_use = [
     'd',
     'e',
 ]
-data = KNNImputer_rrw(var_mis,var_use,n_neighbors,data)
+data = KNNImputer_rrw(var_mis_con,var_mis_cat,var_use,n_neighbors_con,data)
 # This fails because 'e' has missing values
 
 # Trying again only with variables fror the KNN without missing values: 
@@ -81,7 +142,7 @@ var_use = [
     'b',
     'd',
 ]
-data = KNNImputer_rrw(var_mis,var_use,n_neighbors,data)
+data = KNNImputer_rrw(var_mis_con,var_mis_cat,var_use,n_neighbors_con,data)
 
 # Note that for column 'e', there are still missing values
 
@@ -151,9 +212,19 @@ data = data[data['naeringskoder_level_1']!='0'] # companies for investment and h
 data = data[data['naeringskoder_level_1']!='O'] # Public sector
 data = data.reset_index(drop=True) # Reset index 
 
+##################################################################
+##  Selecting only some few (random) rows, as using all takes   ##
+##  very long time to impute. After all, this code is           ##
+##  only an example                                             ##
+##################################################################
+# Shuffle rows to make the extraction random
+data = data.sample(frac=1).reset_index(drop=True)
+
+# Extracting only 50 000 observations
+data = data.iloc[0:50000]
 
 ##################################################################
-##  Making a new variable with some missing values              ##
+##  Making a new continious variable with some missing values   ##
 ##################################################################
 # Making a variable with random numbers between 0 and 1000
 k = 1000
@@ -173,28 +244,47 @@ variable_with_missing_values.at[16495] = None
 variable_with_missing_values.at[612865] = None
 
 # Inserting this variable in data
-data['new_var'] = variable_with_missing_values
+data['new_var_con'] = variable_with_missing_values
 
 ##################################################################
-##  Imputing                                                    ##
+##  Imputing the continious variable                            ##
 ##################################################################
-print('Number of missing values before imputing: {}'.format(np.sum(pd.isnull(data['new_var']))))
-
 # number of neighboring samples to use for imputation
-n_neighbors = 2
+n_neighbors_con = 3
 
-# variables with missing values to be imputed
-var_mis = [
-    'new_var',
+# CONTINIOUS variables with missing values to be imputed
+var_mis_con = [
+    'new_var_con',
 ]
+
+# CATEGORICAL variables with missing values to be imputed
+var_mis_cat = [
+    'fravalg_revisjon', # This is a dummy with missing values
+    'bistand_regnskapsforer', # This is a dummy with missing values
+]
+
+print('-------------------------')
+print('Number of missing values for variable \'{}\' BEFORE imputing: {}'\
+    .format(var_mis_con[0],np.sum(pd.isnull(data[var_mis_con[0]]))))
+print('Number of missing values for variable \'{}\' BEFORE imputing: {}'\
+    .format(var_mis_cat[0],np.sum(pd.isnull(data[var_mis_cat[0]]))))
+print('Number of missing values for variable \'{}\' BEFORE imputing: {}'\
+    .format(var_mis_cat[1],np.sum(pd.isnull(data[var_mis_cat[1]]))))
+print('-------------------------')
 
 # variables used in the vector space for the kNN algorithm for imputation 
 var_use = [
     'SUM EIENDELER',
-    'regnaar',
+    'can_opt_out',
     'age_in_days',
 ]
-data = KNNImputer_rrw(var_mis,var_use,n_neighbors,data)
+data = KNNImputer_rrw(var_mis_con,var_mis_cat,var_use,n_neighbors_con,data)
 
-print('Number of missing values after imputing: {}'.format(np.sum(pd.isnull(data['new_var']))))
-
+print('-------------------------')
+print('Number of missing values for variable \'{}\' AFTER imputing: {}'\
+    .format(var_mis_con[0],np.sum(pd.isnull(data[var_mis_con[0]]))))
+print('Number of missing values for variable \'{}\' AFTER imputing: {}'\
+    .format(var_mis_cat[0],np.sum(pd.isnull(data[var_mis_cat[0]]))))
+print('Number of missing values for variable \'{}\' AFTER imputing: {}'\
+    .format(var_mis_cat[1],np.sum(pd.isnull(data[var_mis_cat[1]]))))
+print('-------------------------')
