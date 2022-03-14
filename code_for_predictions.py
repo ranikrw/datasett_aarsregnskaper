@@ -18,17 +18,20 @@ import os
 from functions_predictions import *
 
 ##################################################################
-##  Load and data                                               ##
+##  Load data                                                   ##
 ##################################################################
+# Select the folder with data.
+# The folder should contain one file per accounting year, and nothing more
+folder_name = '../../data5/'
+
 print('-----------------------------------------')
 print('Loading data:')
 print('-----------------------------------------')
-folder_name = '../../data5/'
 files = os.listdir(folder_name)
 for current_file in files:
     file_year = int(current_file[0:4])
 
-    # LOADING DATA
+    # Loading one year file
     data_loaded = pd.read_csv(folder_name+current_file,sep=';',low_memory=False)
 
     # Adding all data together into data
@@ -46,9 +49,9 @@ temp = unique_orgnr[0].unique()
 if len(temp)==1:
     print('All orgnr unique')
 else:
-    print('WARNING: not all orgnr unique')
+    print('ERROR: not all orgnr unique')
 
-# Considering only regnaar <= 2019
+# Considering only accountint year 2019 or earlier
 data = data[data.regnaar<=2019]
 data = data.reset_index(drop=True) # Reset index
 
@@ -60,11 +63,13 @@ data = data[data['orgform']=='AS']
 data = data.reset_index(drop=True) # Reset index
 
 # Excluding all small
-data = data[data['SUM EIENDELER']>=5e5]
+# For many rows, accounting variables have no value. No value for accounting
+# variables actually means that it is zero. Thus, use .fillna(0).
+data = data[data['SUM EIENDELER'].fillna(0)>=5e5]
 data = data.reset_index(drop=True) # Reset index 
 
 # Considering only SMEs (https://ec.europa.eu/growth/smes/sme-definition_en)
-ind = (data['sum_omsetning_EUR']<=50e6) | (data['sum_eiendeler_EUR']<=43e6)
+ind = (data['sum_omsetning_EUR'].fillna(0)<=50e6) | (data['sum_eiendeler_EUR'].fillna(0)<=43e6)
 data = data[ind]
 data = data.reset_index(drop=True) # Reset index
 

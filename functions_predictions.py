@@ -7,8 +7,8 @@ import pandas as pd
 def make_variables_for_predictions(data):
 
     # Retrieving relevant accounting values from the financial statements
-    # For many rows, many columns have no value. This actually means that it is zero.
-    # Thus, use .fillna(0) at the end
+    # For many rows, accounting variables have no value. No value for accounting
+    # variables actually means that it is zero. Thus, use .fillna(0).
 
     bankinnskudd_kontanter_og_lignende      = make_variable_string1_but_if_not_string2(data,'Bankinnskudd, kontanter og lignende','Sum bankinnskudd, kontanter og lignende')
 
