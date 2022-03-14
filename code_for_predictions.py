@@ -1,10 +1,10 @@
 ##################################################################
 ##  Description                                                 ##
 ##################################################################
-# This code reproduce much of the results of Table 2 in the following study:
+# This code produces some of the values of Table 2 in the following study:
 # Paraschiv, F., Schmid, M., & Wahlstrøm, R. R. (2022). Bankruptcy Prediction of Privately Held SMEs Using Feature Selection Methods.
 # Available at SSRN: https://dx.doi.org/10.2139/ssrn.3911490
-
+# (The code is not the same as used in the study, so some minor deviations from Table 2 will occur)
 ##################################################################
 
 import numpy as np
@@ -206,6 +206,8 @@ for regnaar_test in data_folds.index:
     testing_data['prediction'] = y_hat_test
     data_with_predictions = pd.concat([data_with_predictions,testing_data])
     data_with_predictions = data_with_predictions.reset_index(drop=True) # Reset index 
+
+
 
 # Check data_with_predictions
 # Checking that the sum of all variable values, across all observations, are the same
