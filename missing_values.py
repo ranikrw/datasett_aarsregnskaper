@@ -26,6 +26,10 @@ def KNNImputer_rrw(var_mis_con,var_mis_cat,var_use,n_neighbors_con,data,do_stand
     # n_neighbors_con: number of neighboring samples to use for imputation for continious variables
     # For categorical variables, n_neighbors is one for selecting the value of the one closest
 
+    # Making sure that index is reset.
+    # If not, the process will fail
+    data = data.reset_index(drop=True) # Reset index
+
     # Checking that variables used for imputation do not have missing values
     temp = np.sum(pd.isnull(data[var_use]))
     temp = temp[temp!=0].index.tolist()
