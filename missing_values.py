@@ -40,18 +40,18 @@ def KNNImputer_rrw(var_mis_con,var_mis_cat,var_use,n_neighbors_con,data,do_stand
     elif len(temp)==0:
         # Imputing variable, one at a time
 
+        # Creating vector space used for the kNN-algorithm
+        data_var_use = data[var_use]
+
+        # Standardizing the vector space to a mean of 0 and 
+        # standard deviation of 1 for each variable, respectively
+        if do_standardize_vector_space:
+            data_var_use = pd.DataFrame(StandardScaler().fit_transform(data_var_use),columns=data_var_use.columns)
+
         # First, continious variables
         for i in var_mis_con:
             t = time.time()
             print('-------------------------')
-
-            # Creating vector space used for the kNN-algorithm
-            data_var_use = data[var_use]
-
-            # Standardizing the vector space to a mean of 0 and 
-            # standard deviation of 1 for each variable, respectively
-            if do_standardize_vector_space:
-                data_var_use = pd.DataFrame(StandardScaler().fit_transform(data_var_use),columns=data_var_use.columns)
 
             # Making data such that first column is the one to be imputed
             data_for_imputation = pd.concat([data[i],data_var_use],axis=1)
@@ -74,13 +74,6 @@ def KNNImputer_rrw(var_mis_con,var_mis_cat,var_use,n_neighbors_con,data,do_stand
         for i in var_mis_cat:
             t = time.time()
             print('-------------------------')
-            # Creating vector space used for the kNN-algorithm
-            data_var_use = data[var_use]
-
-            # Standardizing the vector space to a mean of 0 and 
-            # standard deviation of 1 for each variable, respectively
-            if do_standardize_vector_space:
-                data_var_use = pd.DataFrame(StandardScaler().fit_transform(data_var_use),columns=data_var_use.columns)
 
             # Making data such that first column is the one to be imputed
             data_for_imputation = pd.concat([data[i],data_var_use],axis=1)
