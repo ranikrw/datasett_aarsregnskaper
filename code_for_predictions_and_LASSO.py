@@ -15,7 +15,7 @@ import pandas as pd
 
 import os
 
-from functions_predictions import *
+from functions_predictions_and_LASSO import *
 
 ##################################################################
 ##  Load data                                                   ##
@@ -105,21 +105,17 @@ variable_list.remove('short-term liquidity / current assets')
 interval_winsorizing = [0.01,0.99] # In numbers, so 0.01 = restricting at 1%
 data = winsorizing_and_handling_inf(data,interval_winsorizing,variable_list)
 
-
 # The functions make_variables_for_predictions and winsorizing_and_handling_inf also 
-# make sure to do the following as described in Paraschiv, Schmid, & Wahlstrøm (2022):
+# do the following as described in Paraschiv, Schmid, & Wahlstrøm (2022):
  
 # "If the denominator of a financial ratio is equal to zero, we set the value of 
 # the variable to zero, if the numerator is equal to zero as well. If the numerator is 
 # negative or positive, we set the ratio to the 1st or 99th percentiles of the distribution 
 # of the ratio, respectively."
 
-# Paraschiv, F., Schmid, M., & Wahlstrøm, R. R. (2022). Bankruptcy Prediction of Privately Held SMEs Using Feature Selection Methods. (https://dx.doi.org/10.2139/ssrn.3911490)
-
 first_regnaar = 2010 # First accounting year to use for test
 num_years_rolling_window = 4 # Number of accounting years to use for training data
 data_folds = making_folds(first_regnaar,num_years_rolling_window,data)
-
 
 ##################################################################
 ##  Preparing modelling                                         ##
@@ -134,6 +130,12 @@ index_for_results.append('AUC on test set')
 index_for_results.append('R-squared')
 index_for_results.append('Number observations test set')
 index_for_results.append('Number bankrupt in test set')
+
+##################################################################
+##  Parameters for the LASSO plots                              ##
+##################################################################
+# Set to True to show variable names next to lines on LASSO plot
+do_show_labels = True
 
 ##################################################################
 ##  Making predictions                                          ##
@@ -161,12 +163,18 @@ for regnaar_test in data_folds.index:
     # Dividing between X (independent variables) and y (dependent variable)
     X_train, y_train, X_test, y_test = get_training_and_testing_data_for_fold(training_data,testing_data,variable_list)
 
+    # Maximum iterations for training the LASSO and 
+    # Logistic regression models
+    maxiter = 1e6
+
+    # Making and saving LASSO paths
+    LASSO_path_rrw(X_train,y_train,maxiter,do_show_labels,regnaar_test)
+
     # Adding intercept
     X_train = sm.add_constant(X_train)
     X_test  = sm.add_constant(X_test)
 
     method = 'bfgs'
-    maxiter = 1e6
     model = sm.Logit(y_train, X_train)
     model = model.fit(maxiter=maxiter)
     
@@ -206,8 +214,6 @@ for regnaar_test in data_folds.index:
     testing_data['prediction'] = y_hat_test
     data_with_predictions = pd.concat([data_with_predictions,testing_data])
     data_with_predictions = data_with_predictions.reset_index(drop=True) # Reset index 
-
-
 
 # Check data_with_predictions
 # Checking that the sum of all variable values, across all observations, are the same

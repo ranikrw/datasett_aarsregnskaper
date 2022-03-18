@@ -4,6 +4,19 @@ import numpy as np
 import pandas as pd
 # Copyright (c) 2008-2012, AQR Capital Management, LLC, Lambda Foundry, Inc. and PyData Development Team
 
+from sklearn.svm import l1_min_c
+from sklearn.preprocessing import StandardScaler
+from sklearn import linear_model
+from sklearn import metrics
+from sklearn.linear_model import lasso_path
+# © 2007 - 2019, scikit-learn developers (BSD License).
+
+import matplotlib.pyplot as plt
+
+import os
+
+import time
+
 def make_variables_for_predictions(data):
 
     # Retrieving relevant accounting values from the financial statements
@@ -267,17 +280,133 @@ def get_training_and_testing_data_for_fold(training_data,testing_data,variable_l
     # Making training data (into ndarray)
     X_train = training_data[variable_list]
     y_train = training_data['bankrupt_fs']
-    X_train = X_train.to_numpy()
-    y_train = y_train.to_numpy()
-    X_train = X_train.astype('float')
-    y_train = y_train.astype('int')
-
+    X_train = X_train.astype(float)
+    y_train = y_train.astype(int)
+        
     # Making test data (into ndarray)
     X_test = testing_data[variable_list]
     y_test = testing_data['bankrupt_fs']
-    X_test = X_test.to_numpy()
-    y_test = y_test.to_numpy()
-    X_test = X_test.astype('float')
-    y_test = y_test.astype('int')
+    X_test = X_train.astype(float)
+    y_test = y_train.astype(int)
 
     return X_train, y_train, X_test, y_test
+
+
+def LASSO_path_rrw(X_train,y_train,maxiter,do_show_labels,regnaar_test):
+
+        # Parameters that determine how the plots will look like
+        fig_width  = 10 # Width of the figure
+        fig_length = 10 # Length of the figure
+        linewidth  = 2  # Width of the lines in the plots
+        fontsize   = 18
+
+        # Making folder for saving plots
+        folder_name = 'results_plots'
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name)
+
+        # Standardize the variables in the training set
+        X_train_standardized = pd.DataFrame(StandardScaler().fit_transform(X_train),columns=X_train.columns)
+
+        eps = 5e-3  # the smaller it is the longer is the path
+        lambda_values, coefs_lasso, _ = lasso_path(X_train_standardized, y_train, eps=eps)
+
+        # Plot LASSO path
+        fig, ax = plt.subplots(1, 1, figsize=(fig_width,fig_length))
+        col_num = 0
+        for coef_l in coefs_lasso:
+            l1 = plt.plot(lambda_values, coef_l, linewidth=linewidth,label=X_train_standardized.columns[col_num])
+            col_num +=1
+        ax.set_xlim(ax.get_xlim()[::-1]) # Making descending x-axis
+        if do_show_labels:
+            textno=0
+            y_values=[]
+            for line in ax.lines:
+                y = line.get_ydata()[-1]
+                y_values.append(y)
+                ax.annotate(X_train_standardized.columns[textno], xy=(.95,y), xytext=(3,0),xycoords = ax.get_yaxis_transform(), textcoords="offset points",size=fontsize, va="center")
+                textno+=1
+        ax.legend(loc = 'best', fontsize=fontsize,bbox_to_anchor=(1, -0.1),fancybox=False, shadow=False, ncol=1)
+        ax.set_xlabel(r'$\lambda$',fontsize=fontsize)
+        ax.set_ylabel('Standardized coefficients',fontsize=fontsize)
+        # ax.set_title('LASSO Path',fontsize=fontsize)
+        ax.tick_params(axis = 'both', which = 'major', labelsize = fontsize)
+        ax.tick_params(axis = 'both', which = 'minor', labelsize = fontsize)
+        # plt.show() # Uncomment to show plot in Kernel
+        plt.savefig(folder_name+'/LASSO_path_'+str(regnaar_test)+'.png',dpi=150, bbox_inches='tight')
+        plt.close() # So the figures do not overlap
+
+
+        ##################################################################
+        ##  Alternative LASSO path                                      ##
+        ##################################################################
+        # Below is an alternative, if not better, way of making the LASSO path
+        # However, I do not get the function l1_min_c to give correct value
+        # Thus, I use the code above instead
+
+        if False: # Set to False to skip all below
+            # Defining a LASSO model
+            model = linear_model.LogisticRegression(\
+                solver='saga',
+                penalty='l1',
+                max_iter=maxiter,
+                tol=1e-4,
+                C=1, # This will be set to other values below
+                fit_intercept=True,
+                random_state=0)
+
+            # Making C-values for the LASSO path
+            # C is the inverse of lambda
+            c_min = l1_min_c(X_train_standardized, y_train, loss='log')
+            cs = c_min*np.logspace(0, 7, 20)
+
+            # Making LASSO path and training AUC
+            auc_train = []
+            t=time.time()
+            df_coefs = pd.DataFrame(index=X_train_standardized.columns)
+            for c in cs:
+                model.set_params(C=c) # C is the inverse of lambda
+                model.fit(X_train_standardized, y_train)
+                lambda_val = 1/c
+                df_coefs[lambda_val] = pd.Series(model.coef_.ravel(),name=lambda_val,dtype=float,index=X_train_standardized.columns)
+                auc_train.append(metrics.roc_auc_score(y_train,model.predict_proba(X_train_standardized)[:,1]))
+            print('Elapset time total LASSO path: {} minutes'.format(np.round(((time.time()-t))/60,2)))
+
+            # Transposing dataframe
+            df_coefs = df_coefs.transpose()
+
+            # Plot LASSO path
+            fig, ax = plt.subplots(1, 1, figsize=(fig_width,fig_length))
+            ax.plot(df_coefs, linewidth=linewidth,label=df_coefs.columns)
+            ax.set_xlim(ax.get_xlim()[::-1]) # Making descending x-axis
+            if do_show_labels:
+                textno=0
+                y_values=[]
+                for line in ax.lines:
+                    y = line.get_ydata()[-1]
+                    y_values.append(y)
+                    ax.annotate(df_coefs.columns[textno], xy=(.95,y), xytext=(3,0),xycoords = ax.get_yaxis_transform(), textcoords="offset points",size=fontsize, va="center")
+                    textno+=1
+            ax.legend(loc = 'best', fontsize=fontsize,bbox_to_anchor=(1, -0.1),fancybox=False, shadow=False, ncol=1)
+            ax.set_xlabel(r'$\lambda$',fontsize=fontsize)
+            ax.set_ylabel('Standardized coefficients',fontsize=fontsize)
+            # ax.set_title('LASSO Path',fontsize=fontsize)
+            ax.tick_params(axis = 'both', which = 'major', labelsize = fontsize)
+            ax.tick_params(axis = 'both', which = 'minor', labelsize = fontsize)
+            # plt.show() # Uncomment to show plot in Kernel
+            plt.savefig(folder_name+'/LASSO_path_'+str(regnaar_test)+'.png',dpi=150, bbox_inches='tight')
+            plt.close() # So the figures do not overlap
+
+            # Plot AUC scores for LASSO path
+            fig, ax = plt.subplots(1, 1, figsize=(fig_width,fig_length))
+            ax.plot(df_coefs.index.tolist(), auc_train, linewidth=linewidth)
+            ax.set_xlim(ax.get_xlim()[::-1]) # Making descending x-axis
+            ax.set_xlabel(r'$\lambda$',fontsize=fontsize)
+            ax.set_ylabel('AUC on training set',fontsize=fontsize)
+            ax.tick_params(axis = 'both', which = 'major', labelsize = fontsize)
+            ax.tick_params(axis = 'both', which = 'minor', labelsize = fontsize)
+            # plt.show() # Uncomment to show plot in Kernel
+            plt.savefig(folder_name+'/LASSO_path_AUC_scores'+'_'+str(regnaar_test)+'.png',dpi=150, bbox_inches='tight')
+            plt.close() # So the figures do not overlap
+
+
