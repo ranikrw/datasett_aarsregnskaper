@@ -66,8 +66,7 @@ def make_variables_for_predictions(data):
 
     name = 'accounts payable / total assets'
     variable_list.append(name)
-    ratio = leverandorgjeld.divide(sum_eiendeler)
-    data[name] = set_to_zero_if_num_and_denum_is_zero(ratio,leverandorgjeld,sum_eiendeler)
+    data[name] = make_ratio(leverandorgjeld,sum_eiendeler)
 
     name = 'dummy; one if total liability exceeds total assets'
     variable_list.append(name)
@@ -76,23 +75,19 @@ def make_variables_for_predictions(data):
     name = '(current liabilities - short-term liquidity) / total assets'
     variable_list.append(name)
     temp = sum_omlopsmidler - bankinnskudd_kontanter_og_lignende
-    ratio = temp.divide(sum_eiendeler)
-    data[name] = set_to_zero_if_num_and_denum_is_zero(ratio,temp,sum_eiendeler)
+    data[name] = make_ratio(temp,sum_eiendeler)
 
     name = 'net income / total assets'
     variable_list.append(name)
-    ratio = arsresultat.divide(sum_eiendeler)
-    data[name] = set_to_zero_if_num_and_denum_is_zero(ratio,arsresultat,sum_eiendeler)
+    data[name] = make_ratio(arsresultat,sum_eiendeler)
 
     name = 'public taxes payable / total assets'
     variable_list.append(name)
-    ratio = skyldige_offentlige_avgifter.divide(sum_eiendeler)
-    data[name] = set_to_zero_if_num_and_denum_is_zero(ratio,skyldige_offentlige_avgifter,sum_eiendeler)
+    data[name] = make_ratio(skyldige_offentlige_avgifter,sum_eiendeler)
 
     name = 'interest expenses / total assets'
     variable_list.append(name)
-    ratio = annen_rentekostnad.divide(sum_eiendeler)
-    data[name] = set_to_zero_if_num_and_denum_is_zero(ratio,annen_rentekostnad,sum_eiendeler)
+    data[name] = make_ratio(annen_rentekostnad,sum_eiendeler)
 
     name = 'dummy; one if paid-in equity is less than total equity'
     variable_list.append(name)
@@ -112,25 +107,24 @@ def make_variables_for_predictions(data):
 
     name = 'inventory / current assets'
     variable_list.append(name)
-    ratio = sum_varer.divide(sum_kortsiktig_gjeld)
-    data[name] = set_to_zero_if_num_and_denum_is_zero(ratio,sum_varer,sum_kortsiktig_gjeld)
+    data[name] = make_ratio(sum_varer,sum_kortsiktig_gjeld)
 
     name = 'short-term liquidity / current assets'
     variable_list.append(name)
-    ratio = bankinnskudd_kontanter_og_lignende.divide(sum_kortsiktig_gjeld)
-    data[name] = set_to_zero_if_num_and_denum_is_zero(ratio,bankinnskudd_kontanter_og_lignende,sum_kortsiktig_gjeld)
-
+    data[name] = make_ratio(bankinnskudd_kontanter_og_lignende,sum_kortsiktig_gjeld)
 
     return data,variable_list
 
 
-def set_to_zero_if_num_and_denum_is_zero(fraction,numerator,denumerator):
+def make_ratio(numerator,denumerator):
+    ratio = numerator.divide(denumerator)
+
     # If both numerator and denumerator are zero, the ratio is set to zero
-    for i in range(len(fraction)):
+    for i in range(len(ratio)):
         if numerator[i]==0:
             if denumerator[i]==0:
-                fraction[i]=np.double(0)
-    return fraction
+                ratio[i]=np.double(0)
+    return ratio
 
 
 def make_variable_string1_but_if_not_string2(data,string1,string2):
